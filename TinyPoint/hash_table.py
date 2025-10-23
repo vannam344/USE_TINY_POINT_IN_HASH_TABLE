@@ -1,5 +1,5 @@
 # tinypoint/hash_table.py
-from deref_table import DerefTable
+from .deref_table import create_deref_table, PointerType, AllocationFailed
 from typing import Any, Optional
 
 class TinyHashTable:
@@ -9,17 +9,22 @@ class TinyHashTable:
     thay vì lưu trực tiếp value trong bảng chính.
     """
 
-    def __init__(self, initial_capacity: int = 256):
-        self.deref = DerefTable(n=initial_capacity)
+    def __init__(self, initial_capacity: int = 256, pointer_type: PointerType = PointerType.FIXED):
+        self.deref = create_deref_table(n=initial_capacity, pointer_type=pointer_type)
         self.index_table = {}   # ánh xạ key -> tiny pointer p
 
     def insert(self, key: Any, value: Any) -> int:
         """
         Lưu value thông qua DerefTable, nhận tiny pointer p.
         """
-        p = self.deref.allocate(key, value)
-        self.index_table[key] = p
-        return p
+        try:
+            p = self.deref.allocate(key, value)
+            self.index_table[key] = p
+            return p
+        except AllocationFailed as e:
+            # In a real-world scenario, we might want to resize the deref table here.
+            print(f"Warning: DerefTable allocation failed: {e}")
+            raise
 
     def get(self, key: Any) -> Optional[Any]:
         """
