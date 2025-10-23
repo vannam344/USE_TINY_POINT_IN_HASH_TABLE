@@ -7,10 +7,6 @@ class AllocationFailed(Exception):
     pass
 
 class _Container:
-    """
-    Manages allocations for a subset of keys, as described in Prop. 1.
-    Contains multiple levels of LoadBalancingTables and overflow arrays.
-    """
     def __init__(self, capacity: int):
         self.capacity = capacity
         self.num_items = 0
@@ -23,8 +19,6 @@ class _Container:
         s = capacity
         for _ in range(num_levels):
             if s == 0: break
-            # Each level is a load balancing table. Delta is constant (e.g., 1/2)
-            # so bucket size `b` is constant.
             self.levels.append(LoadBalancingTable(num_slots=s, delta=0.5))
             self.overflow_arrays.append([None] * s)
             self.level_slots.append(s)
@@ -41,13 +35,10 @@ class _Container:
         for i in range(len(self.levels)):
             self.level_occupancy[i] += 1
             
-            # Try to allocate in the i-th load balancing table
             p = self.levels[i].allocate(k, value)
             if p is not None:
-                # Success! Pointer encodes level and the LBT pointer.
                 return (i, p)
 
-            # LBT failed, check if we must use the overflow array
             next_level_occupancy = self.level_occupancy[i+1] if i + 1 < len(self.levels) else 0
             next_level_slots = self.level_slots[i+1] if i + 1 < len(self.levels) else 0
 
@@ -56,12 +47,9 @@ class _Container:
                 for j in range(len(self.overflow_arrays[i])):
                     if self.overflow_arrays[i][j] is None:
                         self.overflow_arrays[i][j] = (k, value)
-                        # Pointer encodes level and overflow index, with a flag.
-                        return (i | (1<<31), j) # Use MSB as overflow flag
-                # Should not happen due to occupancy checks
+                        return (i | (1<<31), j) 
                 raise RuntimeError("Overflow array is full unexpectedly.")
         
-        # Should not be reached if container has capacity
         raise RuntimeError("Failed to allocate in a container with available capacity.")
 
     def dereference(self, k: Any, p_container: Tuple[int, int]) -> Any:
@@ -104,17 +92,9 @@ class _Container:
 
 
 class VariableSizeDerefTable:
-    """
-    An implementation of a dereference table for variable-size tiny pointers,
-    as described in Theorem 2 and Proposition 1 of the "Tiny Pointers" paper.
-    """
     def __init__(self, n: int):
-        # n is the max number of items, not slots.
-        # Total slots will be O(n).
         self.n_items = n
         
-        # Each container holds log(n) items on average.
-        # We set container capacity to c*log(n) for some constant c.
         self.container_capacity = max(16, int(4 * math.log2(n)) if n > 1 else 16)
         self.num_containers = math.ceil(n / math.log2(n)) if n > 1 else 1
         
@@ -134,12 +114,9 @@ class VariableSizeDerefTable:
             
         level, p_level = p_container
         
-        # The final tiny pointer must encode the container index and the pointer from the container.
-        # This is a simplification; a real implementation would use bit packing.
         return (container_idx << 48) | (level << 32) | p_level
 
     def _decode_pointer(self, p: int) -> Tuple[int, Tuple[int, int]]:
-        """Decodes a global pointer into (container_idx, container_pointer)."""
         container_idx = p >> 48
         level = (p >> 32) & 0xFFFF
         p_level = p & 0xFFFFFFFF
