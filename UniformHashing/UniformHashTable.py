@@ -1,5 +1,3 @@
-# UniformHashTable.py
-from UniformHashScenario import generate_permutation  
 from CollisionHandlers import CollisionStrategy, UniformHashStrategy
 from typing import Any, Iterator, Optional
 
@@ -38,9 +36,6 @@ class UniformHashTable:
         if self.count / self.size >= self.load_factor:
             self._resize()
             
-        # probe_seq = list(self._probe_sequence(key))
-        # print(f"Probe sequence for {key}: {probe_seq}")
-
         for pos in self._probe_sequence(key):
             if self.table[pos] is None:
                 self.table[pos] = (key, value)

@@ -1,7 +1,6 @@
-# CollisionHandlers.py
 import hashlib
 from typing import Any, Iterator, Protocol
-from UniformHashScenario import generate_permutation  
+from UniformHashScenario import generate_permutation
 
 class CollisionStrategy(Protocol):
     def get_probe_sequence(self, key: Any, table_size: int) -> Iterator[int]: ...
@@ -12,12 +11,12 @@ class UniformHashStrategy:
 
 class DoubleHashStrategy:
     def __init__(self):
-        self._prime = 1099511628211  # 64-bit prime
+        self._prime = 1099511628211
     
     def get_probe_sequence(self, key: Any, table_size: int) -> Iterator[int]:
         h1 = self._hash1(key, table_size)
         h2 = self._hash2(key, table_size)
-        h2 = h2 if h2 % 2 == 1 else h2 + 1  # ensure odd
+        h2 = h2 if h2 % 2 == 1 else h2 + 1
         
         for i in range(table_size):
             yield (h1 + i * h2) % table_size
